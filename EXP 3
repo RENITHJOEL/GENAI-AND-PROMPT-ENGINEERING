@@ -1,0 +1,140 @@
+import pandas as pd
+import re
+import string
+import nltk
+
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+try:
+    nltk.download('punkt_tab')
+except:
+    pass
+
+reviews = {
+    "Review": [
+        "The food was delicious",
+        "I really enjoyed this meal",
+        "The pizza was amazing",
+        "Excellent taste and quality",
+        "Very tasty and fresh",
+        "The food was terrible",
+        "I did not like the meal",
+        "The pizza tasted awful",
+        "Very poor food quality",
+        "The meal was disappointing"
+    ],
+    "Sentiment": [
+        "Positive",
+        "Positive",
+        "Positive",
+        "Positive",
+        "Positive",
+        "Negative",
+        "Negative",
+        "Negative",
+        "Negative",
+        "Negative"
+    ]
+}
+
+df = pd.DataFrame(reviews)
+
+print("Original Dataset")
+print(df)
+
+df["Review"] = df["Review"].str.lower()
+
+df["Review"] = df["Review"].apply(
+    lambda text: text.translate(
+        str.maketrans('', '', string.punctuation)
+    )
+)
+
+df["Review"] = df["Review"].apply(
+    lambda text: re.sub(r'\d+', '', text)
+)
+
+df["Review"] = df["Review"].apply(word_tokenize)
+
+stop_words = set(stopwords.words("english"))
+
+df["Review"] = df["Review"].apply(
+    lambda words: [
+        word for word in words
+        if word not in stop_words
+    ]
+)
+
+lemmatizer = WordNetLemmatizer()
+
+df["Review"] = df["Review"].apply(
+    lambda words: [
+        lemmatizer.lemmatize(word)
+        for word in words
+    ]
+)
+
+df["Review"] = df["Review"].apply(
+    lambda words: " ".join(words)
+)
+
+print("\nProcessed Dataset")
+print(df)
+
+vectorizer = CountVectorizer()
+
+X = vectorizer.fit_transform(df["Review"])
+
+y = df["Sentiment"]
+
+classifier = MultinomialNB()
+
+classifier.fit(X, y)
+
+print("\nModel Trained Successfully")
+
+new_review = "The food has amazing taste"
+
+print("\nOriginal Test Sentence:")
+print(new_review)
+
+new_review = new_review.lower()
+
+new_review = new_review.translate(
+    str.maketrans('', '', string.punctuation)
+)
+
+new_review = re.sub(r'\d+', '', new_review)
+
+tokens = word_tokenize(new_review)
+
+tokens = [
+    word for word in tokens
+    if word not in stop_words
+]
+
+tokens = [
+    lemmatizer.lemmatize(word)
+    for word in tokens
+]
+
+clean_review = " ".join(tokens)
+
+print("\nProcessed Test Sentence:")
+print(clean_review)
+
+test_vector = vectorizer.transform([clean_review])
+
+result = classifier.predict(test_vector)
+
+print("\nPredicted Sentiment:")
+print(result[0])
